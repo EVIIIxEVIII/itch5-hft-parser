@@ -1,7 +1,7 @@
 #include "parser.hpp"
 
 #include <stdint.h>
-#include <iostream>
+#include <memory.h>
 
 enum class MessageType {
     SYSTEM_EVENT                = 'S',
@@ -11,10 +11,9 @@ enum class MessageType {
     MARKET_PARTICIPANT_POSITION = 'L',
     MWCB_DECLINE_LEVEL_MESSAGE  = 'V',
     MWCB_STATUS_MESSAGE         = 'W',
-    IPO_QUOTING_PERIOD_UPD_MSG  = 'K',
+    IPO_QUOTING_PERIOD_UPD  = 'K',
     LULD_AUCTION_COLLAR         = 'J',
     OPERATIONAL_HALT            = 'h',
-    // ---- Order book messages ----
 
     ADD_ORDER_NO_MPID = 'A',
     ADD_ORDER_MPID    = 'F',
@@ -25,7 +24,7 @@ enum class MessageType {
     ORDER_DELETE         = 'D',
     ORDER_REPLACE        = 'U',
 
-    TRADE_MSG        = 'P',
+    NON_CROSS_TRADE_MSG        = 'P',
     CROSS_TRADE_MSG  = 'Q',
     BROKEN_TRADE_MSG = 'B',
 
@@ -277,16 +276,161 @@ struct Message {
     };
 };
 
-void ItchParser::parse(std::byte const *  src, std::byte* dst, size_t len) {
+inline uint64_t load_be48(const std::byte* p) {
+    return (uint64_t(p[0]) << 40) |
+           (uint64_t(p[1]) << 32) |
+           (uint64_t(p[2]) << 24) |
+           (uint64_t(p[3]) << 16) |
+           (uint64_t(p[4]) << 8)  |
+           uint64_t(p[5]);
+}
+
+inline uint64_t load_be64(const std::byte* p) {
+    return (uint64_t(p[0]) << 56) |
+           (uint64_t(p[1]) << 48) |
+           (uint64_t(p[2]) << 40) |
+           (uint64_t(p[3]) << 32) |
+           (uint64_t(p[4]) << 24) |
+           (uint64_t(p[5]) << 16) |
+           (uint64_t(p[6]) << 8)  |
+           uint64_t(p[7]);
+}
+
+inline uint32_t load_be32(const std::byte* p) {
+    return (uint32_t(p[0]) << 24) |
+           (uint32_t(p[1]) << 16) |
+           (uint32_t(p[2]) << 8)  |
+           uint32_t(p[3]);
+}
+
+inline uint16_t load_be16(const std::byte* p) {
+    return (uint16_t(p[0]) << 8) | uint16_t(p[1]);
+}
+
+static inline SystemEvent parse_system_event(std::byte const * src) {
+    SystemEvent sysEvent;
+    sysEvent.stock_locate = load_be16(src);
+    src += 2;
+    sysEvent.tracking_number = load_be16(src);
+    src += 2;
+    sysEvent.timestamp = load_be48(src);
+    src += 6;
+    sysEvent.event_code = char(src[0]);
+    src += 1;
+    return sysEvent;
+}
+
+static inline StockDirectory parse_stock_directory(std::byte const * src) {
+    StockDirectory stockDir;
+    stockDir.stock_locate = load_be16(src);
+    src += 2;
+
+    stockDir.tracking_number = load_be16(src);
+    src += 2;
+
+    stockDir.timestamp = load_be48(src);
+    src += 6;
+
+    memcpy(&stockDir.stock, src, 8);
+    src += 8;
+
+    stockDir.market_category = char(src[0]);
+    src += 1;
+
+    stockDir.financial_status_indicator = char(src[0]);
+    src += 1;
+
+    stockDir.round_lot_size = load_be32(src);
+    src += 4;
+
+
+}
+
+template <typename Handler>
+void ItchParser::parse(std::byte const *  src, size_t len, Handler& handler) {
     std::byte const * end = src + len;
     while (src < end) {
         uint16_t size = __builtin_bswap16(*reinterpret_cast<uint16_t const *>(src));
         src += 2;
 
-        char type = *reinterpret_cast<char const *>(src);
+        auto type = *reinterpret_cast<MessageType const *>(src);
+        switch (type) {
+            case MessageType::SYSTEM_EVENT: {
+                Message msg{};
+                msg.type = type;
+                msg.system_event = parse_system_event(src);
+                handler.handle(msg);
 
-        std::cout << size << '\n';
-        std::cout << type << '\n';
+                break;
+            }
+
+            case MessageType::STOCK_DIRECTORY:
+                break;
+
+            case MessageType::STOCK_TRADING_ACTION:
+                break;
+
+            case MessageType::REG_SHO:
+                break;
+
+            case MessageType::MARKET_PARTICIPANT_POSITION:
+                break;
+
+            case MessageType::MWCB_DECLINE_LEVEL_MESSAGE:
+                break;
+
+            case MessageType::MWCB_STATUS_MESSAGE:
+                break;
+
+            case MessageType::IPO_QUOTING_PERIOD_UPD:
+                break;
+
+            case MessageType::LULD_AUCTION_COLLAR:
+                break;
+
+            case MessageType::OPERATIONAL_HALT:
+                break;
+
+            case MessageType::ADD_ORDER_NO_MPID:
+                break;
+
+            case MessageType::ADD_ORDER_MPID:
+                break;
+
+            case MessageType::ORDER_EXECUTED:
+                break;
+
+            case MessageType::ORDER_EXECUTED_PRICE:
+                break;
+
+            case MessageType::ORDER_CANCEL:
+                break;
+
+            case MessageType::ORDER_DELETE:
+                break;
+
+            case MessageType::ORDER_REPLACE:
+                break;
+
+            case MessageType::NON_CROSS_TRADE_MSG:
+                break;
+
+            case MessageType::CROSS_TRADE_MSG:
+                break;
+
+            case MessageType::BROKEN_TRADE_MSG:
+                break;
+
+            case MessageType::NOII_MSG:
+                break;
+
+            case MessageType::DIRECT_LISTING_CAPITAL_RAISE:
+                break;
+
+            default:
+                break;
+        }
+
 
         src += size;
     }

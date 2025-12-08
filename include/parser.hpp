@@ -4,7 +4,9 @@
 
 class ItchParser {
 public:
-    void parse(std::byte const *  src, std::byte* dst, size_t len);
+
+    template <typename Handler>
+    void parse(std::byte const *  src, size_t len, Handler& visitor);
 private:
 
 };
