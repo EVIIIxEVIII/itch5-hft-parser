@@ -718,7 +718,6 @@ inline uint16_t load_be16(const std::byte* p) {
     return (uint16_t(p[0]) << 8) | uint16_t(p[1]);
 }
 
-static volatile uint64_t sink;
 inline Message ItchParser::parseMsg(std::byte const * src) {
     uint16_t size = load_be16(src);
     src += 2;
@@ -735,7 +734,6 @@ inline Message ItchParser::parseMsg(std::byte const * src) {
     #define X(NAME, TYPE, FIELD) \
         case MessageType::NAME: { \
             auto m = parse_msg<TYPE##Layout, TYPE>(src); \
-            sink ^= m.timestamp; \
             msg.FIELD = m; \
             break; \
         }

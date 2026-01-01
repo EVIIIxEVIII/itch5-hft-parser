@@ -843,7 +843,6 @@ inline DirectListingCapitalRaise parseDirectListingCapitalRaise(std::byte const 
     return directListingCapitalRaise;
 }
 
-static volatile uint64_t sink;
 inline Message ItchParser::parseMsg(std::byte const * src) {
     uint16_t size = load_be16(src);
     src += 2;
@@ -860,7 +859,6 @@ inline Message ItchParser::parseMsg(std::byte const * src) {
     #define X(NAME, TYPE, FIELD) \
         case MessageType::NAME: { \
             TYPE m = parse##TYPE(src); \
-            sink ^= m.timestamp; \
             msg.FIELD = m; \
             break; \
         }
