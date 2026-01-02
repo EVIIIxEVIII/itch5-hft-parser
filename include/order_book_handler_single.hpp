@@ -1,5 +1,8 @@
 #pragma once
+
 #include <cstdint>
+#include <chrono>
+#include <unordered_map>
 #include "parser_v1.hpp"
 #include "order_book.hpp"
 
@@ -31,15 +34,23 @@ struct OrderBookHandlerSingle {
     void handle_order_replace(const ITCHv1::OrderReplace&);
 
     void handle_after();
+    void handle_before();
 
+    using clock = std::chrono::high_resolution_clock;
     OB::OrderBook<OB::VectorLevel> order_book;
+
+    std::chrono::time_point<clock> start;
+    std::unordered_map<uint64_t, uint64_t> latency_distribution;
 };
 
+inline void OrderBookHandlerSingle::handle_before() {
+    start = clock::now();
+}
+
 inline void OrderBookHandlerSingle::handle_after() {
-    if (order_book.bid_levels.levels.size() && order_book.ask_levels.levels.size()) {
-        std::cout << "Best ask: " << order_book.best_ask().price << '\n';
-        std::cout << "Best bid: " << order_book.best_bid().price << '\n';
-    }
+    auto end = clock::now();
+    auto latency = std::chrono::round<std::chrono::nanoseconds>(end - start).count();
+    latency_distribution[latency]++;
 }
 
 inline void OrderBookHandlerSingle::handle_stock_directory(const ITCHv1::StockDirectory& msg) {

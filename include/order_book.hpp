@@ -19,6 +19,10 @@ enum class Side {
 template<Side S>
 class VectorLevel {
 public:
+    VectorLevel() {
+        levels.reserve(3000);
+    }
+
     void remove(Level level);
     void add(Level level);
     Level best() const;

@@ -894,6 +894,7 @@ void ItchParser::parse_specific(std::byte const * src, size_t len, SpecificHandl
         switch (type) {
         #define X(NAME, TYPE, FIELD) \
             case MessageType::NAME: { \
+                handler.handle_before(); \
                 auto m = parse##TYPE(src); \
                 handler.handle_##FIELD(m); \
                 handler.handle_after(); \

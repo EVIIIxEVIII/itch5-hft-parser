@@ -120,6 +120,35 @@ void print_order_book(OB::OrderBook<OB::VectorLevel> order_book) {
     }
 }
 
+void export_latency_distribution_csv(
+    const std::unordered_map<uint64_t, uint64_t>& latency_distribution
+) {
+    std::vector<std::pair<uint64_t, uint64_t>> data;
+    data.reserve(latency_distribution.size());
+
+    for (const auto& kv : latency_distribution) {
+        data.emplace_back(kv.first, kv.second);
+    }
+
+    std::sort(
+        data.begin(),
+        data.end(),
+        [](const auto& a, const auto& b) {
+            return a.first < b.first;
+        }
+    );
+
+    std::ofstream out("../data/latency_distribution.csv");
+    if (!out) {
+        std::abort();
+    }
+
+    out << "latency_ns,count\n";
+    for (const auto& [latency, count] : data) {
+        out << latency << "," << count << "\n";
+    }
+}
+
 int main() {
     auto res = init_benchmark();
     auto src_buf = res.first;
@@ -133,39 +162,11 @@ int main() {
     CounterHandler h1;
     run_one("ITCH v1", parser_v1, h1, src, len);
 
+    using clock = std::chrono::high_resolution_clock;
+
     OrderBookHandlerSingle obHandler;
     parser_v1.parse_specific(src, len, obHandler);
-
-    OB::OrderBook<OB::VectorLevel> order_book;
-
-    order_book.add_order(1, OB::Side::Bid, 10, 100);
-    order_book.add_order(2, OB::Side::Bid, 10, 100);
-    order_book.add_order(3, OB::Side::Bid, 10, 99);
-    order_book.add_order(4, OB::Side::Bid, 10, 98);
-    order_book.add_order(5, OB::Side::Bid, 10, 97);
-
-    order_book.add_order(6, OB::Side::Ask, 10, 101);
-    order_book.add_order(7, OB::Side::Ask, 10, 102);
-    order_book.add_order(8, OB::Side::Ask, 10, 103);
-    order_book.add_order(9, OB::Side::Ask, 10, 104);
-
-    print_order_book(order_book);
-
-    order_book.execute_order(1, 3);
-    std::cout << "execute qty: 3, order_id: 1, price: 100" << '\n';
-    print_order_book(order_book);
-
-    order_book.cancel_order(4, 5);
-    std::cout << "cancel qty: 5, order_id: 4, price: 98" << '\n';
-    print_order_book(order_book);
-
-    order_book.delete_order(5);
-    std::cout << "delete qty: all, order_id: 5, price: 97" << '\n';
-    print_order_book(order_book);
-
-    order_book.replace_order(7, 10, 7, 105);
-    std::cout << "replace qty: 7, order_id: 7, price: 105" << '\n';
-    print_order_book(order_book);
+    export_latency_distribution_csv(obHandler.latency_distribution);
 
     return 0;
 }
