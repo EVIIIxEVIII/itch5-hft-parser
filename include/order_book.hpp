@@ -14,8 +14,8 @@ public:
     void replace_order(uint64_t order_id, uint64_t new_order_id, uint32_t qty, uint32_t price);
     void delete_order(uint64_t order_id);
 
-    Level best_bid() const;
-    Level best_ask() const;
+    Level best_bid();
+    Level best_ask();
 
     absl::flat_hash_map<uint64_t, Order> orders_map;
     Levels<Side::Bid> bid_levels;
@@ -23,12 +23,12 @@ public:
 };
 
 template<template<Side> typename Levels>
- Level OrderBook<Levels>::best_bid() const {
+ Level OrderBook<Levels>::best_bid() {
     return bid_levels.best();
 }
 
 template<template<Side> typename Levels>
- Level OrderBook<Levels>::best_ask() const {
+ Level OrderBook<Levels>::best_ask() {
     return ask_levels.best();
 }
 

@@ -9,7 +9,7 @@ template<Side S>
 class HeapLevels {
 public:
     HeapLevels() {
-        qty_by_price.reserve(3000);
+        qty_by_price.reserve(4000);
     }
 
     void add(Level level);
@@ -63,8 +63,8 @@ inline Level HeapLevels<S>::best() {
         heap.pop();
     }
 
-    UNEXPECTED(true, "Best called on empty book");
-    return {};
+    //UNEXPECTED(true, "Best called on empty book");
+    return {0, 0};
 }
 
 }

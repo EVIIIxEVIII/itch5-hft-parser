@@ -4,6 +4,8 @@
 #include <iostream>
 #include <ittnotify.h>
 #include <vector>
+#include <iostream>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -117,9 +119,38 @@ void print_order_book(OB::OrderBook<OB::ArrayLevel> order_book) {
     }
 }
 
+uint64_t calibrate_tsc() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    uint64_t t0_ns = ts.tv_sec * 1'000'000'000ull + ts.tv_nsec;
+
+    unsigned aux;
+    uint64_t c0 = __rdtscp(&aux);
+
+    timespec sleep_ts;
+    sleep_ts.tv_sec = 1;
+    sleep_ts.tv_nsec = 0;
+
+    nanosleep(&sleep_ts, nullptr);
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    uint64_t t1_ns = ts.tv_sec * 1'000'000'000ull + ts.tv_nsec;
+
+    uint64_t c1 = __rdtscp(&aux);
+
+    uint64_t delta_cycles = c1 - c0;
+    uint64_t delta_ns = t1_ns - t0_ns;
+
+    __int128 tmp = (__int128)delta_cycles * 1'000'000'000;
+    return (tmp + delta_ns / 2) / delta_ns;
+}
+
 void export_latency_distribution_csv(
     const absl::flat_hash_map<uint64_t, uint64_t>& latency_distribution
 ) {
+    uint64_t rdtscp_freq = calibrate_tsc();
+    std::cout << "rdtscp frequence: " << rdtscp_freq << '\n';
+
     std::vector<std::pair<uint64_t, uint64_t>> data;
     data.reserve(latency_distribution.size());
 
@@ -141,10 +172,29 @@ void export_latency_distribution_csv(
     }
 
     out << "latency_ns,count\n";
-    for (const auto& [latency, count] : data) {
-        out << latency << "," << count << "\n";
+    for (const auto& [cycles, count] : data) {
+        __int128 tmp = (__int128)cycles * 1'000'000'000;
+        uint64_t ns = cycles * 1e9 / rdtscp_freq;
+        out << ns << "," << count << "\n";
     }
 }
+
+void export_prices_csv(
+    const std::vector<uint32_t>& prices
+) {
+    std::vector<uint32_t> data = prices;
+
+    std::ofstream out("../data/prices.csv");
+    if (!out) {
+        std::abort();
+    }
+
+    out << "price\n";
+    for (uint32_t price : data) {
+        out << price << "\n";
+    }
+}
+
 
 int main() {
     __itt_pause();
@@ -154,7 +204,6 @@ int main() {
 
     const std::byte* src = src_buf.data();
     size_t len = bytes_read;
-
 
     //ITCHv1::ItchParser parser_v1;
     //CounterHandler h1;
@@ -166,6 +215,7 @@ int main() {
 
     //sleep(3);
 
+
     ITCHv1::ItchParser parser_v1_2;
     OrderBookHandlerSingle obHandler;
     parser_v1_2.parse_specific(src, len, obHandler);
@@ -173,6 +223,7 @@ int main() {
     //kill(perf_pid, SIGINT);
 
     export_latency_distribution_csv(obHandler.latency_distribution);
+    export_prices_csv(obHandler.prices);
 
     return 0;
 }

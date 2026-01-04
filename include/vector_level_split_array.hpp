@@ -20,7 +20,11 @@ public:
 
 template<Side S>
 inline Level VectorLevelBSearch<S>::best() const {
-    return levels.back();
+    if (!levels.empty()) {
+        return levels.back();
+    } else {
+        return {0, 0};
+    }
 }
 
 template<Side S>

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <chrono>
 #include <absl/container/flat_hash_map.h>
+#include <x86intrin.h>
 #include "array_level.hpp"
 #include "heap_level.hpp"
 #include "parser_v1.hpp"
@@ -41,24 +42,41 @@ struct OrderBookHandlerSingle {
     void handle_after();
     void handle_before();
 
-    using clock = std::chrono::high_resolution_clock;
     OB::OrderBook<OB::HeapLevels> order_book;
 
     bool touched = false;
-    std::chrono::time_point<clock> start;
     absl::flat_hash_map<uint64_t, uint64_t> latency_distribution;
+
+
+    unsigned aux_start, aux_end;
+
+    uint64_t t0;
+
+    uint32_t last_price = 0;
+    std::vector<uint32_t> prices;
+
+    OrderBookHandlerSingle() {
+        prices.reserve(20'000);
+    }
 };
 
 inline void OrderBookHandlerSingle::handle_before() {
     touched = false;
-    start = clock::now();
+    t0 = __rdtscp(&aux_start);
 }
 
 inline void OrderBookHandlerSingle::handle_after() {
-    auto end = clock::now();
-    auto latency = std::chrono::round<std::chrono::nanoseconds>(end - start).count();
+    uint64_t t1 = __rdtscp(&aux_end);
+    auto cycles = t1 - t0;
+
+    uint32_t best_bid = order_book.best_bid().price;
+    if (last_price != best_bid) {
+        prices.push_back(best_bid);
+        last_price = best_bid;
+    }
+
     if (touched) {
-        latency_distribution[latency]++;
+        latency_distribution[cycles]++;
     }
 }
 
