@@ -41,7 +41,7 @@ struct OrderBookHandlerSingle {
     void handle_before();
 
     using clock = std::chrono::high_resolution_clock;
-    OB::OrderBook<OB::VectorLevelSplit> order_book;
+    OB::OrderBook<OB::ArrayLevelBSearch> order_book;
 
     bool touched = false;
     std::chrono::time_point<clock> start;
@@ -68,43 +68,50 @@ inline void OrderBookHandlerSingle::handle_stock_directory(const ITCHv1::StockDi
 }
 
 inline void OrderBookHandlerSingle::handle_add_order_no_mpid(const ITCHv1::AddOrderNoMpid& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.add_order(msg.order_reference_number, static_cast<OB::Side>(msg.buy_sell), msg.shares, msg.price);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.add_order(msg.order_reference_number, static_cast<OB::Side>(msg.buy_sell), msg.shares, msg.price);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_add_order_mpid(const ITCHv1::AddOrderMpid& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.add_order(msg.order_reference_number, static_cast<OB::Side>(msg.buy_sell), msg.shares, msg.price);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.add_order(msg.order_reference_number, static_cast<OB::Side>(msg.buy_sell), msg.shares, msg.price);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_order_executed(const ITCHv1::OrderExecuted& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.execute_order(msg.order_reference_number, msg.executed_shares);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.execute_order(msg.order_reference_number, msg.executed_shares);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_order_executed_price(const ITCHv1::OrderExecutedPrice& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.execute_order(msg.order_reference_number, msg.executed_shares);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.execute_order(msg.order_reference_number, msg.executed_shares);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_order_cancel(const ITCHv1::OrderCancel& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.cancel_order(msg.order_reference_number, msg.cancelled_shares);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.cancel_order(msg.order_reference_number, msg.cancelled_shares);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_order_delete(const ITCHv1::OrderDelete& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.delete_order(msg.order_reference_number);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.delete_order(msg.order_reference_number);
+        touched = true;
+    }
 }
 
 inline void OrderBookHandlerSingle::handle_order_replace(const ITCHv1::OrderReplace& msg) {
-    if (msg.stock_locate != target_stock_locate) return;
-    order_book.replace_order(msg.order_reference_number, msg.new_reference_number, msg.shares, msg.price);
-    touched = true;
+    if (msg.stock_locate == target_stock_locate) {
+        order_book.replace_order(msg.order_reference_number, msg.new_reference_number, msg.shares, msg.price);
+        touched = true;
+    }
 }

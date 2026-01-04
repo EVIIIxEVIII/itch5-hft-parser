@@ -25,7 +25,7 @@ inline Level VectorLevel<S>::best() const {
 }
 
 template<Side S>
-inline void VectorLevel<S>::remove(Level level) {
+[[gnu::noinline]] void VectorLevel<S>::remove(Level level) {
     auto rit = std::ranges::find_if(
         levels.rbegin(), levels.rend(),
         [price = level.price](const Level& p) {
@@ -43,7 +43,7 @@ inline void VectorLevel<S>::remove(Level level) {
 }
 
 template<Side S>
-inline void VectorLevel<S>::add(Level level) {
+[[gnu::noinline]] void VectorLevel<S>::add(Level level) {
     auto rit = std::ranges::find_if(
         levels.rbegin(), levels.rend(),
         [price = level.price](const Level& p) {

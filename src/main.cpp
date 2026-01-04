@@ -1,5 +1,4 @@
 #include <array>
-#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -12,7 +11,6 @@
 #include <unistd.h>
 
 #include "parser_v1.hpp"
-#include "parser_v2.hpp"
 #include "array_level.hpp"
 #include "order_book_handler_single.hpp"
 
@@ -30,35 +28,6 @@ struct CounterHandler {
     std::array<uint64_t, 256> counts{};
     uint64_t messages_num = 0;
 };
-
-static void run_one(
-    const char* name,
-    ITCHv1::ItchParser& parser,
-    CounterHandler& handler,
-    const std::byte* src,
-    size_t len
-) {
-    using clock = std::chrono::high_resolution_clock;
-
-    handler.reset();
-
-    auto start = clock::now();
-    parser.parse(src, len, handler);
-    auto end = clock::now();
-
-    double seconds =
-        std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-
-    uint64_t msgs = handler.messages_num;
-    double throughput = msgs / seconds;
-    double avg_ns = (seconds * 1e9) / double(msgs);
-
-    std::cout << "=== " << name << " ===\n";
-    std::cout << "Messages:        " << msgs << "\n";
-    std::cout << "Seconds:         " << seconds << "\n";
-    std::cout << "Throughput:      " << throughput << " msg/s\n";
-    std::cout << "Average latency: " << avg_ns << " ns/msg\n\n";
-}
 
 template<typename Handler>
 static void dump_counts(const Handler& handler) {
@@ -89,7 +58,33 @@ std::pair<std::vector<std::byte>, size_t> init_benchmark() {
     return {src_buf, bytes_read};
 }
 
-pid_t run_perf() {
+pid_t run_perf_report() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        char pidbuf[32];
+        snprintf(pidbuf, sizeof(pidbuf), "%d", getppid());
+
+        execlp(
+            "perf",
+            "perf",
+            "record",
+            "-e",
+            "branch-misses:u",
+            "-c",
+            "100",
+            "--call-graph",
+            "dwarf",
+            "-p", pidbuf,
+            nullptr
+        );
+
+        _exit(127);
+    }
+
+    return pid;
+}
+
+pid_t run_perf_stat() {
     pid_t pid = fork();
     if (pid == 0) {
         char pidbuf[32];
@@ -165,15 +160,16 @@ int main() {
     //CounterHandler h1;
     //run_one("ITCH v1", parser_v1, h1, src, len);
 
-    //pid_t perf_pid = run_perf();
-    //sleep(1);
-
     __itt_resume();
+
+    pid_t perf_pid = run_perf_stat();
 
     ITCHv1::ItchParser parser_v1_2;
     OrderBookHandlerSingle obHandler;
     parser_v1_2.parse_specific(src, len, obHandler);
     export_latency_distribution_csv(obHandler.latency_distribution);
+
+    kill(perf_pid, SIGINT);
 
     return 0;
 }

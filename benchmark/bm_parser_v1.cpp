@@ -17,9 +17,6 @@ static void BM_Parse_v1(benchmark::State& state) {
     uint64_t messages = 0;
 
     for (auto _ : state) {
-        HandlerV1 handler{};
-        ITCHv1::Message msg = parser.parse_msg(buf.data());
-        benchmark::DoNotOptimize(msg);
     }
 
     //state.counters["msg/s"] =
