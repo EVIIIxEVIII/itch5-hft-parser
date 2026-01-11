@@ -9,7 +9,7 @@ The itch parser is a fully independent C++20 header file, which can be dragged a
 
 The file can be found at ```include/itch_parser.hpp``` and can be accessed in the ITCH:: namespace.
 
-An example of a Handler class can be found at ```include/example_benchmark_parsing.hpp```.
+An example of a Handler class can be found at ```include/benchmarks/example_benchmark_parsing.hpp``` and also in ```include/benchmarks/example_benchmark.hpp```.
 
 The usage of both the parser and the handler can be found in ```src/main.cpp```.
 
@@ -22,7 +22,15 @@ sudo apt install libabsl-dev
 
 The `order_book.hpp` implementation serves as an interface and all implementations for the underlying order book operations can be found in the `include/levels/` directory. The best implementation used in the benchmarks is the `include/levels/heap_level.hpp` implementation.
 
-# How to run? 
+# How to run the benchmakrs?
+Install `absl` and `google-benchmark`:
+```
+sudo apt update
+sudo apt install libabsl-dev
+sudo apt install libbenchmark-dev
+```
+
+Then build and run like this: 
 ```
 mkdir build
 cd build
@@ -32,6 +40,11 @@ make
 ```
 
 # How to analyze?
+First install matplotlib by running:
+```
+pip install matplotlib
+```
+
 To analyze the latency you have to go to run the `analysis/plot_latency_distribution.py` and `analysis/plot_prices.py` files like this:
 ```
 python plot_latency_distribution.py [input directory] [output directory]
