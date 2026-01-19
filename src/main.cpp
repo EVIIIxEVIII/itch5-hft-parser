@@ -14,6 +14,7 @@
 #include "itch_parser.hpp"
 #include "benchmarks/benchmark_utils.hpp"
 #include "benchmarks/example_benchmark_parsing.hpp"
+#include "benchmarks/example_benchmark.hpp"
 
 std::atomic<bool> run_noise = true;
 
@@ -121,33 +122,28 @@ int main(int argc, char** argv) {
 
     std::thread noise(allocator_noise);
 
-    #ifdef PERF
-        pid_t pid = run_perf_stat();
-        sleep(3);
-    #endif
-
     ITCH::ItchParser parser;
-    //{
-    //    BenchmarkOrderBook ob_bm_handler;
-    //    parser.parse(src, len, ob_bm_handler);
+    BenchmarkOrderBook ob_bm_handler;
+    rte_mbuf* bufs[32];
 
-    //    #ifndef PERF
-    //    export_latency_distribution_csv(ob_bm_handler, outdir + "parsing_and_order_book_latency_distribution.csv");
-    //    export_prices_csv(ob_bm_handler.prices, outdir);
-    //    #endif
-    //}
+    while (true) {
+        uint16_t n = rte_eth_rx_burst(port_id, 0, bufs, 32);
 
-    {
-        BenchmarkParsing parsing_bm_handler;
-        parser.parse(src, len, parsing_bm_handler);
+        for (int i = 0; i < n; ++i) {
+            rte_mbuf* m = bufs[i];
+            std::cout << "Got a packet" << '\n';
 
-        #ifndef PERF
-        export_latency_distribution_csv(parsing_bm_handler, outdir + "parsing_lantecy_distribution.csv");
-        #endif
+            std::byte* p = rte_pktmbuf_mtod(m, std::byte*);
+            uint16_t len = m->pkt_len;
+
+            //parser.parse(src, len, ob_bm_handler);
+            rte_pktmbuf_free(m);
+        }
     }
 
-    #ifdef PERF
-        kill(pid, SIGINT);
+    #ifndef PERF
+    export_latency_distribution_csv(ob_bm_handler, outdir + "parsing_and_order_book_latency_distribution.csv");
+    export_prices_csv(ob_bm_handler.prices, outdir);
     #endif
 
     run_noise = false;
